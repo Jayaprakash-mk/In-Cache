@@ -103,7 +103,7 @@ const commandHandlers = {
             else if(args.length === 2) incValue = args[1]
             store[key] = {type: "string", value: incValue};
 
-            return `:${parseInt(incValue)}\r\n`
+            return `:${parseInt(incValue, 10)}\r\n`
         }
 
         const value = parseInt(store[key].value, 10);
@@ -111,7 +111,7 @@ const commandHandlers = {
         if(isNaN(value)) return "-ERR value is not an integer or out of range\r\n"
 
         if(args.length === 1) incValue = value + 1;
-        else if(args.length === 2) incValue = value + parseInt(args[1]);
+        else if(args.length === 2) incValue = value + parseInt(args[1], 10);
         store[key].value = (incValue).toString()
 
         logger.debug(incValue)
@@ -137,7 +137,7 @@ const commandHandlers = {
             else if(args.length === 2) decValue = ("-" + args[1])
             store[key] = {type: "string", value: decValue};
 
-            return `:${parseInt(decValue)}\r\n`
+            return `:${parseInt(decValue, 10)}\r\n`
         }
 
         const value = parseInt(store[key].value, 10);
@@ -145,13 +145,116 @@ const commandHandlers = {
         if(isNaN(value)) return "-ERR value is not an integer or out of range\r\n"
 
         if(args.length === 1) decValue = value - 1;
-        else if(args.length === 2) decValue = value - parseInt(args[1]);
+        else if(args.length === 2) decValue = value - parseInt(args[1], 10);
         store[key].value = (decValue).toString()
 
         logger.debug(decValue)
 
         return `:${decValue}\r\n`
 
+    },
+
+    LPUSH: (args) => {
+        if(args.length < 2){
+            return "-ERR Wrong number of arguments for `LPUSH` command\r\n"
+        }
+
+        const [key, ...values] = args
+
+        if(!store[key]){
+            store[key] = {type: "list", value: []}
+        }
+
+        if(store[key].type !== "list"){
+            return "-ERR Wrong type of key\r\n"
+        }
+
+        store[key].value.unshift(...values)
+
+        return `:${store[key].value.length}\r\n`
+    },
+
+    RPUSH: (args) => {
+        if(args.length < 2){
+            return "-ERR Wrong number of arguments for `RPUSH` command\r\n"
+        }
+
+        const [key, ...values] = args
+
+        if(!store[key]){
+            store[key] = {type: "list", value: []}
+        }
+
+        if(store[key].type !== "list"){
+            return "-ERR Wrong type of key\r\n"
+        }
+
+        store[key].value.push(...values)
+
+        return `:${store[key].value.length}\r\n`
+    },
+
+    LPOP: (args) => {
+        if(args.length < 1){
+            return "-ERR Wrong number of arguments for `LPOP` command\r\n"
+        }
+
+        const [key] = args
+
+        if(checkExpiry(key) || !store[key] || store[key].type !== "list" || store[key].value.length === 0){
+            return "#f\r\n"
+        }
+
+        const value = store[key].value.shift()
+
+        return `$${value.length}\r\n${value}\r\n`
+
+    },
+
+    RPOP: (args) => {
+        if(args.length < 1){
+            return "-ERR Wrong number of arguments for `RPOP` command\r\n"
+        }
+
+        const [key] = args
+
+        if(checkExpiry(key) || !store[key] || store[key].type !== "list" || store[key].value.length === 0){
+            return "#f\r\n"
+        }
+
+        const value = store[key].value.pop()
+
+        return `$${value.length}\r\n${value}\r\n`
+    },
+
+    LRANGE: (args) => {
+        if(args.length < 3){
+            return "-ERR Wrong number of arguments for `LRANGE` command\r\n"
+        }
+
+        const [key, start, end] = args
+
+        if(checkExpiry(key) || !store[key] || store[key].type !== "list"){
+            return "#f\r\n"
+        }
+
+        const list = store[key].value
+        const startIndex = parseInt(start, 10)
+        const endIndex = parseInt(end, 10)
+
+        if(isNaN(startIndex) || isNaN(endIndex) || startIndex >= list.length || endIndex >= list.length || startIndex < 0 || endIndex < 0 || startIndex > endIndex){
+            return "-ERR Invalid start or end range value\r\n"
+        }
+
+        const range = list.slice(startIndex, endIndex + 1)
+
+        let response = `*${range.length}\r\n`
+
+        range.forEach((value) => {
+            response += `$${value.length}\r\n${value}\r\n`
+        })
+
+        return response
     },
 
     SUCCESS: () => "+OK\r\n",

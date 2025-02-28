@@ -211,3 +211,87 @@ test("should return $-1 for a non-existent key", async () => {
     const response6 = await sendCommand("decr decNewValue2 5");
     assert.strictEqual(response6, ":-5\r\n");
   });
+
+  test("should return error for LRANGE invalid key", async () => {
+    const errorResponse1 = await sendCommand("lrange list1");
+    assert.strictEqual(
+      errorResponse1,
+      "-ERR Wrong number of arguments for `LRANGE` command\r\n"
+    );
+  
+    const errorResponse2 = await sendCommand("lrange list1 0 4");
+    assert.strictEqual(errorResponse2, "#f\r\n");
+
+    const lPushResponse1 = await sendCommand("lpush newList el1");
+    assert.strictEqual(lPushResponse1, ":1\r\n");
+  
+    const errorResponse3 = await sendCommand("lrange newList 2 1");
+    assert.strictEqual(
+        errorResponse3, 
+        "-ERR Invalid start or end range value\r\n"
+    );
+  
+    const errorResponse4 = await sendCommand("lrange newList one two");
+    assert.strictEqual(
+        errorResponse4, 
+        "-ERR Invalid start or end range value\r\n"
+    );
+  });
+  
+  test("should LPUSH for a key, error cases and LRANGE", async () => {
+    const lPushResponse = await sendCommand("lpush list1 el1");
+    assert.strictEqual(lPushResponse, ":1\r\n");
+  
+    const lRangeResponse = await sendCommand("lrange list1 0 0");
+    assert.strictEqual(lRangeResponse, "*1\r\n$3\r\nel1\r\n");
+  
+    const errorResponse1 = await sendCommand("lpush foo");
+    assert.strictEqual(
+      errorResponse1,
+      "-ERR Wrong number of arguments for `LPUSH` command\r\n"
+    );
+  
+    await sendCommand("set foo bar");
+    const errorResponse2 = await sendCommand("lpush foo one");
+    assert.strictEqual(errorResponse2, "-ERR Wrong type of key\r\n");
+  });
+
+  test("should LPOP for a key, error cases and LRANGE", async () => {
+    const lPopResponse1 = await sendCommand("lpop list3");
+    assert.strictEqual(lPopResponse1, "#f\r\n");
+  
+    await sendCommand("lpush list3 el1");
+    await sendCommand("lpush list3 el2");
+  
+    const lRangeResponse = await sendCommand("lrange list3 0 1");
+    assert.strictEqual(lRangeResponse, "*2\r\n$3\r\nel2\r\n$3\r\nel1\r\n");
+  
+    const lPopResponse2 = await sendCommand("lpop list3");
+    assert.strictEqual(lPopResponse2, "$3\r\nel2\r\n");
+  
+    const errorResponse = await sendCommand("lpop");
+    assert.strictEqual(
+      errorResponse,
+      "-ERR Wrong number of arguments for `LPOP` command\r\n"
+    );
+  });
+  
+  test("should RPOP for a key, error cases and LRANGE", async () => {
+    const rPopResponse1 = await sendCommand("rpop list4");
+    assert.strictEqual(rPopResponse1, "#f\r\n");
+  
+    await sendCommand("lpush list4 el1");
+    await sendCommand("lpush list4 el2");
+  
+    const lRangeResponse = await sendCommand("lrange list4 0 1");
+    assert.strictEqual(lRangeResponse, "*2\r\n$3\r\nel2\r\n$3\r\nel1\r\n");
+  
+    const lPopResponse2 = await sendCommand("rpop list4");
+    assert.strictEqual(lPopResponse2, "$3\r\nel1\r\n");
+  
+    const errorResponse = await sendCommand("rpop");
+    assert.strictEqual(
+      errorResponse,
+      "-ERR Wrong number of arguments for `RPOP` command\r\n"
+    );
+  });
