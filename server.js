@@ -1,6 +1,6 @@
 const net = require('net')
 const { parseCommand } = require('./parser')
-const { executeCommand } = require('./coreRedis')
+const { executeCommand, init } = require('./coreRedis')
 const logger = require('./logger')("server")
 
 const server = net.createServer()
@@ -28,5 +28,6 @@ server.on("connection", (socket) => {
 })
 
 server.listen(port, host, () => {
-    logger.log(`Server is listening to ${host}:${port}`)
+    init()
+    logger.info(`Server is listening to ${host}:${port}`)
 })

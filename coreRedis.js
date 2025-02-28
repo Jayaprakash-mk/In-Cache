@@ -78,7 +78,7 @@ const commandHandlers = {
 };
 
 const executeCommand = (command, args) => {
-    logger.log(`Received ${command} ${args}`)
+    logger.info(`Received ${command} ${args}`)
 
     const handler = commandHandlers[command]
 
@@ -88,6 +88,11 @@ const executeCommand = (command, args) => {
     return handler(args)
 }
 
+const init = () => {
+    logger.info("Persistence mode: `in-memory`")
+}
+
 module.exports = {
+    init,
     executeCommand
 }

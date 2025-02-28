@@ -8,8 +8,8 @@ const parseCommand = (data) => {
 
     const command = lines[2].toUpperCase()
     const args = lines.slice(4).filter((param,index) => index%2 === 0)
-    logger.log(command)
-    logger.log(args)
+    logger.info(command)
+    logger.info(args)
 
     return {command, args}
 }
