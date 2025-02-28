@@ -1,4 +1,4 @@
-const logger = require("./logger")("parser")
+const logger = require("./utils/logger")("parser")
 
 const parseCommand = (data) => {
     const lines = data

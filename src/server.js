@@ -1,7 +1,7 @@
 const net = require('net')
 const { parseCommand } = require('./parser')
 const { executeCommand, init } = require('./coreRedis')
-const logger = require('./logger')("server")
+const logger = require('./utils/logger')("server")
 
 const server = net.createServer()
 const port = 6379
