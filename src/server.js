@@ -15,7 +15,7 @@ server.on("connection", (socket) => {
             const {command, args} = parseCommand(data)
             response = executeCommand(command, args)
         } catch (err) {
-            logger.err(err)
+            logger.error(err)
             response = "-ERR unknown command\r\n"
         }
         

@@ -1,7 +1,9 @@
 const logger = require("./utils/logger")("Redis")
+const config = require("./config.json")
+const snapshot = require("./persistence/snapshot")
+const appendOnly = require("./persistence/appendOnly")
 
-const store = {}
-const expirationTimes = {}
+const {store, expirationTimes} = snapshot
 
 const isExpired = (key) => expirationTimes[key] && expirationTimes[key] < Date.now()
 
@@ -261,19 +263,41 @@ const commandHandlers = {
     
 };
 
-const executeCommand = (command, args) => {
-    logger.info(`Received ${command} ${args}`)
+const executeCommand = (command, args, replayingFromAOF = false) => {
+    logger.info(`Received ${command} ${args} ${replayingFromAOF || "AOF"}`)
 
     const handler = commandHandlers[command]
 
     if(!handler){
         return "-ERR unknown command\r\n"
     }
-    return handler(args)
+
+    const result = handler(args)
+
+    if(config.appendonly && !replayingFromAOF && config.aofCommands.includes(command)){
+        appendOnly.appendAof(command, args).then(() => {}).catch(logger.error)
+    }
+
+    return result
 }
 
 const init = () => {
-    logger.info("Persistence mode: `in-memory`")
+    if(config.snapshot){
+        logger.info("Persistence mode: `snapshot`")
+        snapshot.loadSnapshotSync()
+
+        setInterval(async () => {
+            await snapshot.saveSnapshot();
+        }, config.snapshotInterval)
+    }
+    else if(config.appendonly){
+        logger.info("Persistence mode: `append-only`")
+        appendOnly.replayAofSync(executeCommand)
+    }
+    else{
+        logger.info("Persistence mode: `in-memory`")
+    }
+    
 }
 
 module.exports = {
